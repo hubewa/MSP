@@ -34,6 +34,10 @@ void my_image_comp::perform_boundary_extension()
 		}
 }
 
+float fract(float x) {
+	return x - trunc(x);
+}
+
 //Apply Filter
 void apply_filter(my_image_comp *in, my_image_comp *out, int filterExtent)
 {
@@ -66,85 +70,145 @@ void apply_filter(my_image_comp *in, my_image_comp *out, int filterExtent)
 	int row2;
 
 	int level;
+	float *qq = new float[filterDim];
+
+	for (r = 0; r < in->height; r++) {
+		printf("r=%d, in->buf[r,0]=%f\n", r, in->buf[r*in->stride]);
+	}
+
 
 	// Perform the convolution - rows
-	for (r = 0; r < out->height; r++) {
+	for (c = 0; c < in->width; c++) {
+		for (r = 0; r < out->height; r++) {
 		//Build PSF for rows
-		int is_even = r % 2 == 1;
+		int is_even = r % 2 == 0;
+		float ip_r = 2.5F * r;
+		float *psf = mirror_psf;
+		float sum = 0.0F;
 
-		if (is_even) {
+		if (!is_even) {
 			row2 = (r - 1) / 2;
-			for (n = -filterExtent; n <= filterExtent; n++) {
-				mirror_psf[n] = hanning(n, filterExtent) * q(n - 5 * row2 - 2.5F);
+			for (n = -filterExtent; n <= filterExtent; n++, psf++) {
+//				mirror_psf[n] = hanning(n, filterDim) * q(n - 5 * row2 - 2.5F);
+				if (n == 0) {
+//					*psf = 0.;
+					mirror_psf[n] = 0.;
+//					printf("n=%d, psf=%f\n", n, mirror_psf[n]);
+				}
+				else if (n < 0) {
+//					*psf = hanning(n, filterDim) * q(n + fract(ip_r));
+					mirror_psf[n] = hanning(n, filterDim) * q(n + fract(ip_r));
+//					printf("n=%d, hann=%f, q=%f, psf=%f\n", n, hanning(n, filterDim), q(n+fract(ip_r)), mirror_psf[n]);
+//					qq[n + filterExtent] = q(n + fract(ip_r));
+//					qq[n + filterExtent] = q(n - 5 * row2 - 2.5F);
+				}
+				else {
+					mirror_psf[n] = hanning(n, filterDim) * q(n - fract(ip_r));
+//					*psf = hanning(n, filterDim) * q(n - fract(ip_r));
+//					printf("n=%d, hann=%f, q=%f, psf=%f\n", n, hanning(n, filterDim), q(n - fract(ip_r)), mirror_psf[n]);
+					//					qq[n + filterExtent] = q(n + fract(ip_r));
+//					qq[n + filterExtent] = q(n - 5 * row2 - 2.5F);
+				}
 			}
 		}
 		else {
 			row2 = r / 2;
 			for (n = -filterExtent; n <= filterExtent; n++) {
 				level = n + filterExtent;
-				mirror_psf[n] = hanning(n, filterExtent) * q(n - 5 * row2);
+//				mirror_psf[n] = hanning(n, filterExtent) * q(n - 5 * row2);
+//				*psf = hanning(n, filterDim) * q(n + fract(ip_r));
+				mirror_psf[n] = hanning(n, filterDim) * q(n + fract(ip_r));
+//				printf("n=%d, hann=%f, q=%f, psf=%f\n", n, hanning(n, filterDim), q(n + fract(ip_r)), mirror_psf[n]);
+				//				qq[n + filterExtent] = q(n + fract(ip_r));
+//				qq[n + filterExtent] = q(n - 5 * row2);
 			}
 		}
-		for (c = 0; c < out->width; c++){
-			for (m = -filterExtent; m <= filterExtent; m++) {
-				float *ip = in->buf + r*in->stride + c;
+//		printf("ip_r=%f, qq=9*%f, other = 9*%f \n", fract(ip_r), q(n - 5 * row2), q(n + fract(ip_r)));
+//		for (c = 0; c < in->width; c++){
+//			for (m = -filterExtent; m <= filterExtent; m++) {
+//				float *ip = in->buf + r*in->stride + c;
+		{
+				float *ip = in->buf + c;
 				float *temp = temp_buf + r*in->stride + c;
-				float sum = 0.0F;
+				float *psf = mirror_psf;
+				int k;
+
 				//Inner Product :D
-				if ((r+m)*in->stride + c < 0 || (r + m)*in->stride + c >= out->height * out->stride) {
-					sum += 0;
-				}
-				else {
-					int ip_r;
+//				if ((r+m)*in->stride + c < 0 || (r + m)*in->stride + c >= out->height * out->stride) {
+//					sum += 0;
+//				}
+//				else 
+				{
 					if (is_even)
-						ip_r = round(2.5F * r);
+						k = round(ip_r);
 					else
-						ip_r = round(2.5F * r + 0.5F);
-					sum += ip[(ip_r + m)*in->stride + c] * mirror_psf[m + filterExtent];
+						k = round(ip_r + 0.5F);
+					//					printf("ip_size=%d, out->height=%d, in->height=%d, r=%d, ip_r=%d, ip_idx=%d, psf_idx=%d\n", in->stride*(in->height+2*in->border), out->height, in->height, r, (int) ip_r, (k + m)*in->stride, m + filterExtent);
+				}
+				for (m = -filterExtent; m <= filterExtent; m++) {
+
+//					printf("ip=%f, in_stride=%d,  m_psf=%f, r=%d, k=%d, m=%d, sum=%f\n", ip[(k + m)*in->stride], in->stride, mirror_psf[m], r, k, m, sum);
+					sum += ip[(k + m)*in->stride] * mirror_psf[m];
+//					sum += ip[(k + m)*in->stride] * *(psf+m +filterExtent);
 				}
 				*temp = sum;
 			}
 		}
 	}
 	//Convolution for Columns
-	for (c = 0; c < out->width; c++) {
-		int is_even = c % 2 == 1;
-		if (is_even) {
+	for (r = 0; r < out->height; r++) {
+		for (c = 0; c < out->width; c++) {
+		int is_even = c % 2 == 0;
+		float ip_c = 2.5F * c;
+		float sum = 0.0F;
+
+		if (!is_even) {
 			row2 = (r - 1) / 2;
 			for (n = -filterExtent; n <= filterExtent; n++) {
-				mirror_psf[n] = hanning(n, filterExtent) *q(n - 5 * row2 - 2.5F);
+//				mirror_psf[n] = hanning(n, filterExtent) *q(n - 5 * row2 - 2.5F);
+				if (n == 0)
+					mirror_psf[n] = 0.;
+				else if (n < 0)
+					mirror_psf[n] = hanning(n, filterDim) * q(n + fract(ip_c));
+				else
+					mirror_psf[n] = hanning(n, filterDim) * q(n - fract(ip_c));
 			}
 		}
 		else {
 			row2 = r / 2;
 			for (n = -filterExtent; n <= filterExtent; n++) {
 				level = n + filterExtent;
-				mirror_psf[n] = hanning(n, filterExtent) *q(n - 5 * row2);
+//				mirror_psf[n] = hanning(n, filterExtent) *q(n - 5 * row2);
+				mirror_psf[n] = hanning(n, filterDim) * q(n + fract(ip_c));
 			}
 		}
-		for (r = 0; r < out->height; r++){
-			float *ip = temp_buf + r*out->stride + c;
-			float *op = out->buf + r*out->stride + c;
-			float sum = 0.0F;
+//		for (r = 0; r < out->height; r++){
+//		float *ip = temp_buf + r*out->stride + c;
+		float *ip = temp_buf;
+		float *op = out->buf + r*out->stride + c;
+//			float sum = 0.0F;
 			//Inner Product :D
 			for (int y = -filterExtent; y <= filterExtent; y++)
 				// That is, we're looking for even terms 
-				if(r*in->stride + y < 0 || r*in->stride + y >= out->height * in->stride){
-					sum += 0;
-				}
-				else {
-					int ip_c;
+//				if(r*in->stride + y < 0 || r*in->stride + y >= out->height * in->stride){
+//					sum += 0;
+//				}
+//				else 
+				{
+				    int k;
 					if (is_even)
-						ip_c = round(2.5F * c);
+						k = round(ip_c);
 					else
-						ip_c = round(2.5F * c + 0.5F);
-					sum += ip[r *out->stride + (ip_c + y)] * mirror_psf[y];
+						k = round(ip_c + 0.5F);
+
+//					printf("ip=%f, out_stride=%d,  m_psf=%f, r=%d, c=%d, k=%d, y=%d, sum=%f\n", ip[r *out->stride + (k + y)], out->stride, mirror_psf[y], r, c, k, y, sum);
+					sum += ip[r *in->stride + (k + y)] * mirror_psf[y];
 				}
 			*op = sum;
 		}
 	}
-	delete [] filter_buf;
-	delete [] temp_buf;
+//	delete [] filter_buf;
+//	delete [] temp_buf;
 }
 
 int
@@ -179,8 +243,9 @@ main(int argc, char *argv[])
 		int r,c; // Declare row index
 		io_byte *line = new io_byte[width*num_comps];
 		io_byte *outLine = new io_byte[outWidth*num_comps];
-		for (r = outHeight - 1; r >= 0; r--)
-		{ // "r" holds the true row index we are reading, since the image is
+//		for (r = outHeight - 1; r >= 0; r--)
+		for (r = height - 1; r >= 0; r--)
+			{ // "r" holds the true row index we are reading, since the image is
 		  // stored upside down in the BMP file.
 			if ((err_code = bmp_in__get_line(&in, line)) != 0)
 				throw err_code;
@@ -188,8 +253,9 @@ main(int argc, char *argv[])
 			{
 				io_byte *src = line + n; // Points to first sample of component n
 				float *dst = input_comps[n].buf + r * input_comps[n].stride;
-				for (int c = 0; c < outWidth; c++, src += num_comps) {
-					dst[c] = (float)*src; // The cast to type "float" is not
+//				for (int c = 0; c < outWidth; c++, src += num_comps) {
+				for (int c = 0; c < width; c++, src += num_comps) {
+						dst[c] = (float)*src; // The cast to type "float" is not
 										  // strictly required here, since bytes can always be
 										  // converted to floats without any loss of information.
 
