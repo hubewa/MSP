@@ -49,7 +49,8 @@ void apply_filter(my_image_comp *in, my_image_comp *out, int filterExtent)
 	float *filter_buf;
 
 	filter_buf = new float[filterDim];
-	float *mirror_psf = filter_buf + (filterDim*filterExtent) + filterExtent;
+	float *mirror_psf = filter_buf + filterExtent;
+//	float *mirror_psf = filter_buf + (filterDim*filterExtent) + filterExtent;
 	// `mirror_psf' points to the central tap in the filter
 
 	float *temp_buf;
@@ -69,49 +70,59 @@ void apply_filter(my_image_comp *in, my_image_comp *out, int filterExtent)
 	// Perform the convolution - rows
 	for (r = 0; r < out->height; r++) {
 		//Build PSF for rows
-		if (r % 2 == 1) {
+		int is_even = r % 2 == 1;
+
+		if (is_even) {
 			row2 = (r - 1) / 2;
 			for (n = -filterExtent; n <= filterExtent; n++) {
-				mirror_psf[n + filterExtent] = hanning(n, filterExtent) * q(n - 5 * row2 - 2.5F);
+				mirror_psf[n] = hanning(n, filterExtent) * q(n - 5 * row2 - 2.5F);
 			}
 		}
 		else {
 			row2 = r / 2;
 			for (n = -filterExtent; n <= filterExtent; n++) {
 				level = n + filterExtent;
-				mirror_psf[n + filterExtent] = hanning(n, filterExtent) * q(n - 5 * row2);
+				mirror_psf[n] = hanning(n, filterExtent) * q(n - 5 * row2);
 			}
 		}
-		for (c = 0; c < out->width; c++)
-		{
-			float *ip = in->buf + r*in->stride + c;
-			float *temp = temp_buf + r*in->stride + c;
-			float sum = 0.0F;
-			//Inner Product :D
-			if (r*in->stride + c < 0 || r*in->stride + c >= out->height * out->stride) {
-				sum += 0;
+		for (c = 0; c < out->width; c++){
+			for (m = -filterExtent; m <= filterExtent; m++) {
+				float *ip = in->buf + r*in->stride + c;
+				float *temp = temp_buf + r*in->stride + c;
+				float sum = 0.0F;
+				//Inner Product :D
+				if ((r+m)*in->stride + c < 0 || (r + m)*in->stride + c >= out->height * out->stride) {
+					sum += 0;
+				}
+				else {
+					int ip_r;
+					if (is_even)
+						ip_r = round(2.5F * r);
+					else
+						ip_r = round(2.5F * r + 0.5F);
+					sum += ip[(ip_r + m)*in->stride + c] * mirror_psf[m + filterExtent];
+				}
+				*temp = sum;
 			}
-			else {
-				sum += ip[r*in->stride + c] * mirror_psf[c + filterExtent];
-			}
-			*temp = sum;
 		}
 	}
 	//Convolution for Columns
 	for (c = 0; c < out->width; c++) {
-		if (c % 2 == 1) {
-			row2 = (c - 1) / 2;
+		int is_even = c % 2 == 1;
+		if (is_even) {
+			row2 = (r - 1) / 2;
 			for (n = -filterExtent; n <= filterExtent; n++) {
-				mirror_psf[n + filterExtent] = q(n - 5 * row2 - 2.5F);
+				mirror_psf[n] = hanning(n, filterExtent) *q(n - 5 * row2 - 2.5F);
 			}
 		}
 		else {
-			row2 = c / 2;
+			row2 = r / 2;
 			for (n = -filterExtent; n <= filterExtent; n++) {
-				mirror_psf[n + filterExtent] = q(n - 5 * row2);
+				level = n + filterExtent;
+				mirror_psf[n] = hanning(n, filterExtent) *q(n - 5 * row2);
 			}
 		}
-		for (r = 0; r < out->height-1; r++){
+		for (r = 0; r < out->height; r++){
 			float *ip = temp_buf + r*out->stride + c;
 			float *op = out->buf + r*out->stride + c;
 			float sum = 0.0F;
@@ -120,8 +131,14 @@ void apply_filter(my_image_comp *in, my_image_comp *out, int filterExtent)
 				// That is, we're looking for even terms 
 				if(r*in->stride + y < 0 || r*in->stride + y >= out->height * in->stride){
 					sum += 0;
-				} else {
-					sum += ip[y] * mirror_psf[y + filterExtent];
+				}
+				else {
+					int ip_c;
+					if (is_even)
+						ip_c = round(2.5F * c);
+					else
+						ip_c = round(2.5F * c + 0.5F);
+					sum += ip[r *out->stride + (ip_c + y)] * mirror_psf[y];
 				}
 			*op = sum;
 		}

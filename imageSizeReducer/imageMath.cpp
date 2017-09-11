@@ -9,10 +9,10 @@ float sinc(float x) {
 
 //Interpolation kernel, in this case, m and n are two co-ordinates for the input vector
 float q(float m) {
-	float ans = (0.4F) * m;
+	float ans = (0.4F) * sinc(m * 0.4F);
 	return ans;
 }
 
 float hanning(float s, float tau) {
-	return (1.0F + cos((M_PI * s)/tau) / 2.0F);
+	return (1.0F - cos((M_PI * s)/tau) / 2.0F);
 }
