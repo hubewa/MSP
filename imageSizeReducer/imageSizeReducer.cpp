@@ -167,6 +167,12 @@ void apply_filter(my_image_comp *in, my_image_comp *out, int filterExtent)
 				//					printf("ip=%f, out_stride=%d,  m_psf=%f, r=%d, c=%d, k=%d, y=%d, sum=%f\n", ip[r *out->stride + (k + y)], out->stride, mirror_psf[y], r, c, k, y, sum);
 				sum += ip[r *in->stride + (k + y)] * mirror_psf[y];
 			}
+			if (sum < 0) {
+				sum = 0;
+			}
+			else if (sum > 255) {
+				sum = 255;
+			}
 			*op = sum;
 		}
 	}
@@ -201,7 +207,7 @@ main(int argc, char *argv[])
 		int n, num_comps = in.num_components;
 		my_image_comp *input_comps = new my_image_comp[num_comps];
 		for (n = 0; n < num_comps; n++)
-			input_comps[n].init(height, width, 4); // Leave a border of 4
+			input_comps[n].init(height, width, 14); // Leave a border of 14
 
 		int r, c; // Declare row index
 		io_byte *line = new io_byte[width*num_comps];

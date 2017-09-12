@@ -1,5 +1,17 @@
-﻿  imageMath.cpp
-d:\elec4622\msp\msp\imagesizereducer\imagemath.cpp(7): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
-d:\elec4622\msp\msp\imagesizereducer\imagemath.cpp(19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-  imageSizeReducer.vcxproj -> D:\ELEC4622\MSP\MSP\x64\Debug\imageSizeReducer.exe
-  imageSizeReducer.vcxproj -> D:\ELEC4622\MSP\MSP\x64\Debug\imageSizeReducer.pdb (Partial PDB)
+﻿  imageSizeReducer.cpp
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(38): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(94): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(98): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(108): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(116): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(118): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(144): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(146): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(154): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(163): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(165): warning C4244: '=': conversion from 'double' to 'int', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(203): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(204): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+c:\elec4622\msp\imagesizereducer\imagesizereducer.cpp(212): warning C4101: 'c': unreferenced local variable
+  imageSizeReducer.vcxproj -> C:\elec4622\MSP\x64\Debug\imageSizeReducer.exe
+  imageSizeReducer.vcxproj -> C:\elec4622\MSP\x64\Debug\imageSizeReducer.pdb (Partial PDB)
