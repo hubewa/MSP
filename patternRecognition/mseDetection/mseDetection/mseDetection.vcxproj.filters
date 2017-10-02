@@ -27,6 +27,9 @@
     <ClInclude Include="imageMath.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dft.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="mseDetection.cpp">
@@ -36,6 +39,9 @@
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="imageMath.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dft.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>

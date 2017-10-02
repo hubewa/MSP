@@ -101,3 +101,46 @@ float maxCorrelation(my_image_comp * big, my_image_comp * small, int * maxCorr) 
 	}
 	return biggestCorr;
 };
+
+float correlationFloat(my_image_comp * big, my_image_comp * small, int xAxis, int yAxis, float * bigCorr, float * smallCorr) {
+	int xCounter;
+	int yCounter;
+
+	int width = small->width;
+	int height = small->height;
+
+	int start = yAxis * big->stride + xAxis;
+
+	float sum = 0;
+	float product;
+
+	for (yCounter = 0; yCounter < height; yCounter++) {
+		for (xCounter = 0; xCounter < width; xCounter++) {
+			product = bigCorr[start + yCounter*big->stride + xCounter] * smallCorr[yCounter * small->stride + xCounter];
+			sum = sum + product;
+		}
+	}
+
+	return sum;
+}
+
+
+float maxFloatCorrelation(my_image_comp * big, my_image_comp * small, int * maxCorr, float * bigCorr, float * smallCorr) {
+	int xCounter;
+	int yCounter;
+
+	float biggestCorr = 0;
+	float Corr;
+
+	for (yCounter = 0; yCounter < (big->height - small->height); yCounter++) {
+		for (xCounter = 0; xCounter < (big->height - small->height); xCounter++) {
+			Corr = correlationFloat(big, small, xCounter, yCounter, bigCorr, smallCorr);
+			if (Corr > biggestCorr) {
+				maxCorr[0] = xCounter;
+				maxCorr[1] = yCounter;
+				biggestCorr = Corr;
+			}
+		}
+	}
+	return biggestCorr;
+};

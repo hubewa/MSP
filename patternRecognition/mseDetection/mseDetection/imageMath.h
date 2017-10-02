@@ -9,3 +9,7 @@ float smallestMSE(my_image_comp *big, my_image_comp * small, int * smallestCoord
 float correlation(my_image_comp * big, my_image_comp * small, int xAxis, int yAxis);
 
 float maxCorrelation(my_image_comp * big, my_image_comp * small, int * maxCorr);
+
+float correlationFloat(my_image_comp * big, my_image_comp * small, int xAxis, int yAxis, float * bigCorr, float * smallCorr);
+
+float maxFloatCorrelation(my_image_comp * big, my_image_comp * small, int * maxCorr, float * bigCorr, float * smallCorr);

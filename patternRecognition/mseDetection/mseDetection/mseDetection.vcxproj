@@ -146,11 +146,13 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dft.h" />
     <ClInclude Include="imageMath.h" />
     <ClInclude Include="image_comps.h" />
     <ClInclude Include="io_bmp.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dft.cpp" />
     <ClCompile Include="imageMath.cpp" />
     <ClCompile Include="io_bmp.cpp" />
     <ClCompile Include="mseDetection.cpp" />

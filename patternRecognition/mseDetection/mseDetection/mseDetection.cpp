@@ -1,10 +1,12 @@
 // imageSizeReducer.cpp : Defines the entry point for the console application.
 //
 
+#define _USE_MATH_DEFINES 
+
 #include "io_bmp.h"
 //#include "image_comps.h"
-
 #include "imageMath.h"
+#include "dft.h"
 
 #pragma warning(disable:4996)
 
@@ -106,6 +108,180 @@ void zeroIntensity(my_image_comp *out) {
 	}
 }
 
+/*****************************************************************************/
+/*                                DFT                                        */
+/*****************************************************************************/
+
+//Perform DFT
+void performDFT(float *dft_real, float *dft_imag, my_image_comp *input_comps, my_image_comp *output_comps, my_direct_dft newDFT) {
+
+	// First copy all samples to the `dft_real' buffer
+	int stride = input_comps[0].stride;
+	int r;
+	int c;
+
+	int height = input_comps->height;
+	int width = input_comps->width;
+
+	for (r = 0; r < height; r++)
+		for (c = 0; c < width; c++)
+		{
+			dft_real[r*width + c] = input_comps[0].buf[r*stride + c];
+			dft_imag[r*width + c] = 0.0F;
+		}
+	//newDFT.init(max_dim, 1);
+	// Next, perform the 2D DFT
+	/*printf("\n Doing Horizontal \n \n");
+	for (int ii = 0; ii<height*width; ii++)
+	printf("dft[%d] = (%f,%f)\n", ii, dft_real[ii], dft_imag[ii]);
+	newDFT.perform_transform(dft_real, dft_imag, 1); //Horizontal
+	//		  for (int ii=0; ii<height*width; ii++)
+	//			  printf("dft[%d] = (%f,%f)\n", ii, dft_real[ii], dft_imag[ii]);
+	for (int ii = 0; ii<max_dim; ii++)
+	printf("dft[%d] = (%f,%f)\n", ii, dft_real[ii], dft_imag[ii]);
+
+	printf("\n Doing Vertical \n \n");
+	newDFT.perform_transform(dft_real, dft_imag, input_comps->stride); //Vertical
+	*/
+	// Put your code here
+	float * realPtr = dft_real;
+	float * imagPtr = dft_imag;
+	printf("Row \n");
+	for (r = 0; r < height; r++) {
+		newDFT.init(width, 1);
+		realPtr = dft_real + r*stride;
+		imagPtr = dft_imag + r*stride;
+		newDFT.perform_transform(realPtr, imagPtr, 1);
+	}
+	printf("Column \n");
+	realPtr = dft_real;
+	imagPtr = dft_imag;
+	for (c = 0; c < width; c++) {
+		newDFT.init(height, 1);
+		realPtr = dft_real + c;
+		imagPtr = dft_imag + c;
+		//printf("%d \n", c);
+		newDFT.perform_transform(realPtr, imagPtr, stride);
+	}
+
+	// Write DFT magnitudes to the output image, possibly using a log
+	// function to see the values more clearly.
+
+	// Put your code here
+	for (r = 0; r < height; r++) {
+		for (c = 0; c < width; c++) {
+			output_comps[0].buf[r*width + c] = log(sqrt(pow(dft_real[r*width + c], 2) + pow(dft_imag[r*width + c], 2)) + 1);
+		}
+	}
+
+	// Normalize the output image so that the maximum value is 255
+	// and clip to avoid negative values.
+	float max_val = 0.0F;
+	for (r = 0; r < height; r++)
+		for (c = 0; c < width; c++)
+		{
+			float val = output_comps[0].buf[r*stride + c];
+			if (val > max_val)
+				max_val = val;
+		}
+	float scale = 1.0F;
+	if (max_val > 0.0F)
+		scale = 255.0F / max_val;
+	for (r = 0; r < height; r++)
+		for (c = 0; c < width; c++)
+			output_comps[0].buf[r*stride + c] *= scale;
+}
+
+void inverse_DFT(float *dft_real, float *dft_imag, my_image_comp *input_comps, my_image_comp *output_comps, my_direct_dft newDFT) {
+	int stride = input_comps[0].stride;
+	int r;
+	int c;
+
+	int height = input_comps->height;
+	int width = input_comps->width;
+
+	float * realPtr = dft_real;
+	float * imagPtr = dft_imag;
+	printf("Row \n");
+	for (r = 0; r < height; r++) {
+		newDFT.init(width, 0);
+		realPtr = dft_real + r*stride;
+		imagPtr = dft_imag + r*stride;
+		newDFT.perform_transform(realPtr, imagPtr, 1);
+	}
+	printf("Column \n");
+	realPtr = dft_real;
+	imagPtr = dft_imag;
+	for (c = 0; c < width; c++) {
+		newDFT.init(height, 0);
+		realPtr = dft_real + c;
+		imagPtr = dft_imag + c;
+		//printf("%d \n", c);
+		newDFT.perform_transform(realPtr, imagPtr, stride);
+	}
+
+	// Write DFT magnitudes to the output image, possibly using a log
+	// function to see the values more clearly.
+
+	// Put your code here
+	for (r = 0; r < height; r++) {
+		for (c = 0; c < width; c++) {
+			output_comps[0].buf[r*width + c] = sqrt(pow(dft_real[r*width + c], 2) + pow(dft_imag[r*width + c], 2));
+		}
+	}
+
+	// Normalize the output image so that the maximum value is 255
+	// and clip to avoid negative values.
+	float max_val = 0.0F;
+	for (r = 0; r < height; r++)
+		for (c = 0; c < width; c++)
+		{
+			float val = output_comps[0].buf[r*stride + c];
+			if (val > max_val)
+				max_val = val;
+		}
+	float scale = 1.0F;
+	if (max_val > 0.0F)
+		scale = 255.0F / max_val;
+	for (r = 0; r < height; r++)
+		for (c = 0; c < width; c++)
+			output_comps[0].buf[r*stride + c] *= scale;
+}
+
+
+/*****************************************************************************/
+/*                                PHASE                                       */
+/*****************************************************************************/
+
+void phase(float * dft_real, float * dft_imag, my_image_comp * input_comps, float * dft_phase) {
+	int height = input_comps->height;
+	int width = input_comps->width;
+
+	int r;
+	int c;
+
+	for (r = 0; r < height; r++) {
+		for (c = 0; c < width; c++) {
+			if (dft_real[r*width + c] == 0 && dft_imag[r*width + c] > 0)
+				dft_phase[r*width + c] = M_PI / 2;
+			else if (dft_real[r*width + c] == 0 && dft_imag[r*width + c] < 0)
+				dft_phase[r*width + c] = -M_PI / 2;
+			else if (dft_real[r*width + c] == 0 && dft_imag[r*width + c] == 0)
+				dft_phase[r*width + c] = 0;
+			else
+				dft_phase[r*width + c] = tan(dft_imag[r*width + c] / dft_real[r*width + c]);
+			
+			printf("Phase: %f \n", dft_phase[r*width + c]);
+		}
+	}
+}
+
+
+
+
+
+
+
 
 int
 main(int argc, char *argv[])
@@ -187,26 +363,78 @@ main(int argc, char *argv[])
 		}
 		bmp_in__close(&in);
 
+
+		//Output comps for rectangle and normal pic
+
+		my_image_comp *output_comps = new my_image_comp[num_comps];
+		for (n = 0; n < num_comps; n++)
+			output_comps[n].init(height, width, 0); // No extension required
+
+		my_image_comp *output_rect_comps = new my_image_comp[num_comps];
+		for (n = 0; n < num_comps; n++)
+			output_rect_comps[n].init(height, width, 0); // No extension required
+
+
 		int idealCoord[2];
 		int mode = atoi(argv[3]);
+		
+		idealCoord[0] = 0;
+		idealCoord[1] = 0;
+
+		//Check the modes
+		//This mode is for MSE
 		if (mode == 1) {
-			//Fill out MSE here
 			float smallMSE;
 			smallMSE = smallestMSE(input_comps, rectangle_comps, idealCoord);
 			printf("The smallest MSE is %f", smallMSE);
 		}
+		//This mdoe is for correlation
 		else if(mode == 2) {
 			float largeCorr;
 			largeCorr = maxCorrelation(input_comps, rectangle_comps, idealCoord);
 			printf("The largest correlation is %f", largeCorr);
 		}
+		//This mode is for DFT
+		else if (mode == 4 || 5) {
+			//Set up DFT arrays
+			// Allocate storage for DFT buffers
+
+			float *dft_large_real = new float[input_comps->height*input_comps->width];
+			float *dft_large_imag = new float[input_comps->height*input_comps->width];
+
+			float *dft_rect_real = new float[rectangle_comps->height*rectangle_comps->width];
+			float *dft_rect_imag = new float[rectangle_comps->height*rectangle_comps->width];
+
+			my_direct_dft mainDFT = my_direct_dft();
+			my_direct_dft rectDFT = my_direct_dft();
+
+			if (mode == 4) {
+				performDFT(dft_large_real, dft_large_imag, input_comps, output_comps, mainDFT);
+				performDFT(dft_rect_real, dft_rect_imag, rectangle_comps, output_comps, rectDFT);
+			}
+			else if (mode == 5) {
+				float *dft_large_phase = new float[input_comps->height*input_comps->width];
+				float *dft_rect_phase = new float[rectangle_comps->height*rectangle_comps->width];
+				
+				performDFT(dft_large_real, dft_large_imag, input_comps, output_comps, mainDFT);
+				performDFT(dft_rect_real, dft_rect_imag, rectangle_comps, output_comps, rectDFT);
+
+				printf("Doing Phase \n");
+
+				phase(dft_large_real, dft_large_imag, input_comps, dft_large_phase);
+				phase(dft_rect_real, dft_rect_imag, rectangle_comps, dft_rect_phase);
+
+				printf("Doing Correlation \n");
+
+				float largeCorr;
+				maxFloatCorrelation(input_comps, rectangle_comps, idealCoord, dft_large_phase, dft_rect_phase);
+			}
+		} 
 
 		printf("The ideal coordinates are at: X:%d Y:%d", idealCoord[0], idealCoord[1]);
 
-		delete[] line;
-		delete[] line2;
-		delete[] input_comps;
-		delete[] rectangle_comps;
+		//delete[] line;
+		//delete[] line2;
 	}
 	catch (int exc) {
 		if (exc == IO_ERR_NO_FILE)
