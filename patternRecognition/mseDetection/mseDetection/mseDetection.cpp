@@ -53,19 +53,16 @@ void my_image_comp::perform_boundary_extension()
 
 void apply_filter(my_image_comp *in, my_image_comp *out)
 {
-#define FILTER_EXTENT 4
+#define FILTER_EXTENT 2
 #define FILTER_DIM (2*FILTER_EXTENT+1)
 #define FILTER_TAPS (FILTER_DIM*FILTER_DIM)
 
 	// Create the filter kernel as a local array on the stack, which can accept
 	// row and column indices in the range -FILTER_EXTENT to +FILTER_EXTENT.
-	float filter_buf[FILTER_TAPS];
+	float filter_buf[FILTER_TAPS] = { 0,1.0 / 3,1.0 / 2,1.0 / 3,0,1.0 / 3,1.0 / 2,0,1.0 / 2,1.0 / 3,0.5,1,1,1,0.5,1.0 / 3,1.0 / 2,0,1.0 / 2,1.0 / 3,0,1.0 / 3,1.0 / 2,1.0 / 3,0 };
 	float *mirror_psf = filter_buf + (FILTER_DIM*FILTER_EXTENT) + FILTER_EXTENT;
 	// `mirror_psf' points to the central tap in the filter
 	int r, c;
-	for (r = -FILTER_EXTENT; r <= FILTER_EXTENT; r++)
-		for (c = -FILTER_EXTENT; c <= FILTER_EXTENT; c++)
-			mirror_psf[r*FILTER_DIM + c] = 1.0F / FILTER_TAPS;
 
 	// Check for consistent dimensions
 	assert(in->border >= FILTER_EXTENT);
@@ -170,12 +167,13 @@ void performDFT(float *dft_real, float *dft_imag, my_image_comp *input_comps, my
 	// Put your code here
 	for (r = 0; r < height; r++) {
 		for (c = 0; c < width; c++) {
-			output_comps[0].buf[r*width + c] = log(sqrt(pow(dft_real[r*width + c], 2) + pow(dft_imag[r*width + c], 2)) + 1);
+			//output_comps[0].buf[r*width + c] = log(sqrt(pow(dft_real[r*width + c], 2) + pow(dft_imag[r*width + c], 2)) + 1);
 		}
 	}
 
 	// Normalize the output image so that the maximum value is 255
 	// and clip to avoid negative values.
+	/*
 	float max_val = 0.0F;
 	for (r = 0; r < height; r++)
 		for (c = 0; c < width; c++)
@@ -190,6 +188,7 @@ void performDFT(float *dft_real, float *dft_imag, my_image_comp *input_comps, my
 	for (r = 0; r < height; r++)
 		for (c = 0; c < width; c++)
 			output_comps[0].buf[r*stride + c] *= scale;
+	*/
 }
 
 void inverse_DFT(float *dft_real, float *dft_imag, my_image_comp *input_comps, my_image_comp *output_comps, my_direct_dft newDFT) {
@@ -226,7 +225,7 @@ void inverse_DFT(float *dft_real, float *dft_imag, my_image_comp *input_comps, m
 	// Put your code here
 	for (r = 0; r < height; r++) {
 		for (c = 0; c < width; c++) {
-			output_comps[0].buf[r*width + c] = sqrt(pow(dft_real[r*width + c], 2) + pow(dft_imag[r*width + c], 2));
+			output_comps[0].buf[r*width + c] = (float) sqrt(pow(dft_real[r*width + c], 2) + pow(dft_imag[r*width + c], 2));
 		}
 	}
 
@@ -246,6 +245,26 @@ void inverse_DFT(float *dft_real, float *dft_imag, my_image_comp *input_comps, m
 	for (r = 0; r < height; r++)
 		for (c = 0; c < width; c++)
 			output_comps[0].buf[r*stride + c] *= scale;
+}
+
+/*****************************************************************************/
+/*                                MAGNITUDE                                  */
+/*****************************************************************************/
+
+void mag(float * dft_real, float * dft_imag, my_image_comp * input_comps, float * dft_mag) {
+	int height = input_comps->height;
+	int width = input_comps->width;
+
+	int r;
+	int c;
+
+	for (r = 0; r < height; r++) {
+		for (c = 0; c < width; c++) {
+			dft_mag[r*width + c] = (float) sqrt(pow(dft_imag[r*width + c],2) + pow(dft_real[r*width + c],2));
+
+			printf("Magnitude: %f \n", dft_mag[r*width + c]);
+		}
+	}
 }
 
 
@@ -377,25 +396,59 @@ main(int argc, char *argv[])
 
 		int idealCoord[2];
 		int mode = atoi(argv[3]);
-		
-		idealCoord[0] = 0;
-		idealCoord[1] = 0;
+
 
 		//Check the modes
 		//This mode is for MSE
 		if (mode == 1) {
 			float smallMSE;
 			smallMSE = smallestMSE(input_comps, rectangle_comps, idealCoord);
-			printf("The smallest MSE is %f", smallMSE);
+			printf("The smallest MSE is %f \n", smallMSE);
 		}
 		//This mdoe is for correlation
-		else if(mode == 2) {
+		else if (mode == 2) {
 			float largeCorr;
 			largeCorr = maxCorrelation(input_comps, rectangle_comps, idealCoord);
 			printf("The largest correlation is %f", largeCorr);
 		}
 		//This mode is for DFT
-		else if (mode == 4 || 5) {
+		if (mode == 3) {
+			my_image_comp *lowpass_large_comps = new my_image_comp[num_comps];
+			my_image_comp *highpass_large_comps = new my_image_comp[num_comps];
+
+			my_image_comp *lowpass_rect_comps = new my_image_comp[num_comps];
+			my_image_comp *highpass_rect_comps = new my_image_comp[num_comps];
+
+			for (n = 0; n < num_comps; n++) {
+				lowpass_large_comps[n].init(height, width, 0);
+				highpass_large_comps[n].init(height, width, 0);
+			}
+			apply_filter(input_comps, lowpass_large_comps);
+			apply_filter(rectangle_comps, lowpass_rect_comps);
+
+			for (n = 0; n < num_comps; n++) {
+				height = input_comps->height;
+				width = input_comps->width;
+				for (r = 0; r < height; r++) {
+					for (c = 0; c < width; c++) {
+						highpass_large_comps[n].buf[r*width + c] = input_comps[n].buf[r*width + c] - lowpass_large_comps[n].buf[r*width + c];
+					}
+				}
+				height = rectangle_comps->height;
+				width = rectangle_comps->width;
+
+				for (r = 0; r < height; r++) {
+					for (c = 0; c < width; c++) {
+						highpass_rect_comps[n].buf[r*width + c] = rectangle_comps[n].buf[r*width + c] - lowpass_rect_comps[n].buf[r*width + c];
+					}
+				}
+
+				float largeCorr;
+				largeCorr = maxCorrelation(highpass_large_comps, highpass_rect_comps, idealCoord);
+				printf("The largest correlation is %f", largeCorr);
+			}
+
+		}else if (mode == 4 || 5) {
 			//Set up DFT arrays
 			// Allocate storage for DFT buffers
 
@@ -409,13 +462,26 @@ main(int argc, char *argv[])
 			my_direct_dft rectDFT = my_direct_dft();
 
 			if (mode == 4) {
+				float *dft_large_mag = new float[input_comps->height*input_comps->width];
+				float *dft_rect_mag = new float[rectangle_comps->height*rectangle_comps->width];
+
 				performDFT(dft_large_real, dft_large_imag, input_comps, output_comps, mainDFT);
 				performDFT(dft_rect_real, dft_rect_imag, rectangle_comps, output_comps, rectDFT);
+
+				printf("Doing Magnitude \n");
+
+				mag(dft_large_real, dft_large_imag, input_comps, dft_large_mag);
+				mag(dft_rect_real, dft_rect_imag, rectangle_comps, dft_rect_mag);
+
+				printf("Doing Correlation \n");
+
+				float largeCorr;
+				maxFloatCorrelation(input_comps, rectangle_comps, idealCoord, dft_large_mag, dft_rect_mag);
 			}
 			else if (mode == 5) {
 				float *dft_large_phase = new float[input_comps->height*input_comps->width];
 				float *dft_rect_phase = new float[rectangle_comps->height*rectangle_comps->width];
-				
+
 				performDFT(dft_large_real, dft_large_imag, input_comps, output_comps, mainDFT);
 				performDFT(dft_rect_real, dft_rect_imag, rectangle_comps, output_comps, rectDFT);
 
@@ -429,26 +495,27 @@ main(int argc, char *argv[])
 				float largeCorr;
 				maxFloatCorrelation(input_comps, rectangle_comps, idealCoord, dft_large_phase, dft_rect_phase);
 			}
-		} 
+		}
 
 		printf("The ideal coordinates are at: X:%d Y:%d", idealCoord[0], idealCoord[1]);
 
 		//delete[] line;
 		//delete[] line2;
+		}
+		catch (int exc) {
+			if (exc == IO_ERR_NO_FILE)
+				fprintf(stderr, "Cannot open supplied input or output file.\n");
+			else if (exc == IO_ERR_FILE_HEADER)
+				fprintf(stderr, "Error encountered while parsing BMP file header.\n");
+			else if (exc == IO_ERR_UNSUPPORTED)
+				fprintf(stderr, "Input uses an unsupported BMP file format.\n  Current "
+					"simple example supports only 8-bit and 24-bit data.\n");
+			else if (exc == IO_ERR_FILE_TRUNC)
+				fprintf(stderr, "Input or output file truncated unexpectedly.\n");
+			else if (exc == IO_ERR_FILE_NOT_OPEN)
+				fprintf(stderr, "Trying to access a file which is not open!(?)\n");
+			return -1;
+		}
+		return 0;
 	}
-	catch (int exc) {
-		if (exc == IO_ERR_NO_FILE)
-			fprintf(stderr, "Cannot open supplied input or output file.\n");
-		else if (exc == IO_ERR_FILE_HEADER)
-			fprintf(stderr, "Error encountered while parsing BMP file header.\n");
-		else if (exc == IO_ERR_UNSUPPORTED)
-			fprintf(stderr, "Input uses an unsupported BMP file format.\n  Current "
-				"simple example supports only 8-bit and 24-bit data.\n");
-		else if (exc == IO_ERR_FILE_TRUNC)
-			fprintf(stderr, "Input or output file truncated unexpectedly.\n");
-		else if (exc == IO_ERR_FILE_NOT_OPEN)
-			fprintf(stderr, "Trying to access a file which is not open!(?)\n");
-		return -1;
-	}
-	return 0;
-}
+
