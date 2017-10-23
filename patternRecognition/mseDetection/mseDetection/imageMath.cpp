@@ -30,7 +30,7 @@ float mse(my_image_comp * big, my_image_comp * small, int xAxis, int yAxis) {
 			sum = sum + (float) pow((double) diff, 2);
 		}
 	}
-	printf("%f \n", sum);
+	//printf("%f \n", sum);
 	//printf("Big Buffer: %f, Small Buffer: %f \n", big->buf[0], small->buf[0]);
 	return sum;
 }
@@ -45,8 +45,8 @@ float smallestMSE(my_image_comp * big, my_image_comp * small, int * smallestCoor
 
 	for (yCounter = 0; yCounter < (big->height - small->height); yCounter++) {
 		for (xCounter = 0; xCounter < (big->width - small->width); xCounter++) {
-			printf("X: %d, Y: %d \n", xCounter, yCounter);
-			printf("Big Buffer: %f, Small Buffer: %f \n", big->buf[0], small->buf[0]);
+			//printf("X: %d, Y: %d \n", xCounter, yCounter);
+			//printf("Big Buffer: %f, Small Buffer: %f \n", big->buf[0], small->buf[0]);
 			MSE = mse(big, small, xCounter, yCounter);
 			//printf("Big Buffer 3: %f, Small Buffer 3: %f \n", big.buf[0], small.buf[0]);
 			if (MSE < minMSE) {
