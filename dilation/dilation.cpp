@@ -103,7 +103,7 @@ void apply_filter(my_image_comp *in, my_image_comp *out, int * a, int numElement
     for (c=0; c < out->width; c++)
       {
 		float *ip;
-		float val = 255;
+		float val = 0;
         float *op = out->buf + r*out->stride + c;
         float sum = 0.0F;
 
@@ -116,17 +116,17 @@ void apply_filter(my_image_comp *in, my_image_comp *out, int * a, int numElement
 			//printf("Array Index: (%d,%d) \n", a[arrayIndex * 2], a[arrayIndex * 2 + 1]);
 			//printf("Current coordinate check: %d \n", r*in->stride + c + currA);
 			if (r*in->stride + c + currA < 0) { // Check if it exceeds top
-				val = 0.0F;
+				val = 255.0F;
 				//printf("Out of bounds \n");
 			}
 			else if (r*in->stride + c + currA > (in->height*in->stride)){ //Check it doesn't exceed end of the array
-				val = 0.0F;
+				val = 255.0F;
 				//printf("Out of bounds \n");
 			}
 			else {
 				ip = in->buf + r*in->stride + c + currA;
-				if (*ip == 0) {
-					val = 0.0F;
+				if (*ip == 255) {
+					val = 255.0F;
 				}
 				//printf("Zero Entry \n");
 			}
